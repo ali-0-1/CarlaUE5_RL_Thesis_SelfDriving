@@ -50,7 +50,11 @@ Installations:
 This project’s base code and development were inspired by the following resources:
 
 - **Vadim7s GitHub Repository:** SelfDrive → RL_Full_Tutorial
+- https://github.com/vadim7s/SelfDrive/tree/master/RL_Full_Tutorial
+
 - **Full Sim Driving YouTube Tutorial:** Reinforcement Learning for Autonomous Driving Python Code Walkthrough (2024)
+- https://www.youtube.com/watch?v=WF7EyOLe5gA
+
 - **AI Assistance:** Code implementation and optimization were supported using **Copilot** and **ChatGPT** for guidance and automation.
 
 <span style="color: gold">Special thanks to the authors and tools for providing valuable insights and assistance.</span>
