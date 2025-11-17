@@ -57,7 +57,7 @@ This project’s base code and development were inspired by the following resour
 
 - **AI Assistance:** Code implementation and optimization were supported using **Copilot** and **ChatGPT** for guidance and automation.
 
-<span style="color: gold">Special thanks to the authors and tools for providing valuable insights and assistance.</span>
+<span style="color: gold">Special thanks to the author and tools for providing valuable insights and assistance.</span>
 
 ---
 ## License
