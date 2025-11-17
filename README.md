@@ -1,5 +1,5 @@
 
-# Reinforcement Learning with PPO in CARLA UE5
+# <span style="color: gold">Reinforcement Learning with PPO in CARLA UE5</span>
 
 ## Overview
 This project is based on a bachelor's thesis related to Reinforcement Learning using the PPO algorithm in the CARLA UE5 Town10 simulation environment.
@@ -7,6 +7,8 @@ This project is based on a bachelor's thesis related to Reinforcement Learning u
 ### Thesis Details
 - **Topic:** Reinforcement Learning Algorithm Development via CARLA UE5 Simulator  
 - **Implementation:** Steering via Local Planner, Brake and Throttle via Agent  
+- **Project Organization:** MEQAL - Methane Quantization and Localization
+- **MEQAL Info:** https://www.frostbit.fi/en/portfolio/meqal/
 - **Status:** Thesis will be published once procedures are completed
 
 ---
@@ -42,4 +44,18 @@ Installations:
 * pip install numpy==1.24.3
 * pip install nvidia-pyindex nvidia-tensorrt
 * pip install --upgrade matplotlib # if necessary upgrade matplotlib, due to some warnings 
+
+---
+## Acknowledgments
+This project’s base code and development were inspired by the following resources:
+
+- **Vadim7s GitHub Repository:** SelfDrive → RL_Full_Tutorial
+- **Full Sim Driving YouTube Tutorial:** Reinforcement Learning for Autonomous Driving Python Code Walkthrough (2024)
+- **AI Assistance:** Code implementation and optimization were supported using **Copilot** and **ChatGPT** for guidance and automation.
+
+<span style="color: gold">Special thanks to the authors and tools for providing valuable insights and assistance.</span>
+
+---
+## License
+<span style="color: gold">This project is licensed under the MIT License – see the LICENSE file for details.</span>
 
