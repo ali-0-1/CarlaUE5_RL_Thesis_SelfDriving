@@ -14,9 +14,21 @@ from collections import deque
 import math
 # from gymnasium.utils import seeding
 
+# FOR LINUX
 # this was necessary once we worked other than PythonAPI/examples folder, PythonAPI/carla/agents/navigation folder needed
 # Add PythonAPI path so we can import navigation modules (adjust if your path differs)
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "PythonAPI"))
+# sys.path.append(os.path.join(os.path.dirname(__file__), "..", "PythonAPI"))
+# from agents.navigation.global_route_planner import GlobalRoutePlanner
+# from agents.navigation.local_planner import LocalPlanner
+
+# FOR WINDOWS - modify part of ".." according to PythonAPI path, in our case it is 3 folders back
+carla_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..","..", "PythonAPI", "carla"))
+print("CARLA path added to sys.path:", carla_path)
+
+# Add it to sys.path if not already present
+if carla_path not in sys.path:
+    sys.path.append(carla_path)
+
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.local_planner import LocalPlanner
 
@@ -86,19 +98,14 @@ class TrainingEnvironment(gym.Env):
         # Thread-safe image sharing
         self.image_lock = threading.Lock()
 
-        # other telemetry
-        # imu used in data debugging via autopilot but not used in training
-        # self.latest_imu_data = ""
         # collision tracker
         self.collision_happened = False
-        # for debugging
-        # self.collision_event = None
         # Actor against whom the parent collided.
         self.collision_other_actor = None
         # Normal impulse result of the collision, to use the defining guilty party from accident
         self.collision_normal_impulse = None
-        # [Debugging]
-        # self.collision_info = {}
+        # [Debugging] + info logs
+        self.collision_info = {}
         # to use the defining guilty party from accident
         self.collision_impact = None
 
@@ -113,19 +120,8 @@ class TrainingEnvironment(gym.Env):
 
         # track lane data - solid lane
         self.latest_lane_data = None
-        # self.latest_detector_data = None *****
-        # to control display time
-        # self.collision_timer = 0 *****
-        # to control display time
-        # self.lane_invasion_timer = 0 *****
-        # to control display time
-        # self.detection_timer = 0 *****
-
         # to calculate remaining distance to goal
         self.prev_distance = None
-        # to track the progress of route
-        # self.progress_buffer = [] *****
-
         # to track traffic lights in respect to ego vehicle
         self.last_traffic_light = None
         # to track the light state
@@ -134,7 +130,6 @@ class TrainingEnvironment(gym.Env):
         self.tl_distance = None
         # to normalize the distance
         self.initial_tl_distance = None
-        # self.current_throttle = 0.0 *****
         # to store steering value that comes from local planner, used to detect sharp turns
         self.current_steer = 0.0
         # to calculate ego vehicle speed
@@ -166,6 +161,7 @@ class TrainingEnvironment(gym.Env):
         # self.obstacle_frame = None
         # self.collision_frame = None
         # self.current_frame = None
+        # self.collision_event = None
 
         # add difficulty after some steps for curriculum teaching
         self.total_steps = 0 
@@ -213,8 +209,7 @@ class TrainingEnvironment(gym.Env):
         self.latest_lane_data = None
         self.close_pygame = False
         self.step_moved = 0
-        # self.progress_buffer = [] *****
-        # empty the spawned actors during reset TODO uncomment after test ********************
+        # empty the spawned actors during reset
         self.sensor_actors = []                
         self.actor_vehicles = []
         self.walkers = []
@@ -222,7 +217,7 @@ class TrainingEnvironment(gym.Env):
         self.vehicle = None
         self.lp = None
         self.route = []
-        # self.collision_info = {}
+        self.collision_info = {}
         self.collision_impact = None
         self.current_steer = 0.0                    
         # store initial distance to goal to be able to compare
@@ -287,16 +282,6 @@ class TrainingEnvironment(gym.Env):
             # brake for Carla to do spawning
             time.sleep(2)
 
-            # # Spectator above vehicle, incase used
-            # try:
-            #     self.spectator = self.world.get_spectator()
-            #     self.spectator.set_transform(
-            #         carla.Transform(self.vehicle.get_transform().location + carla.Location(z=30),
-            #                         carla.Rotation(pitch=-90))
-            #     )
-            # except Exception as e:
-            #     print(f"[WARN] spectator set failed: {e}")
-
             # random route planning
             self.start_location = self.vehicle.get_location()
             self.goal_location = random.choice(self.spawn_points).location if self.spawn_points else self.start_location
@@ -339,33 +324,13 @@ class TrainingEnvironment(gym.Env):
                     'image_size_y': '300',
                     'fov': '90',
                 })
-                # before training RGB camera used for sensor data debugging
-                """
-                self.camera = self.attach_sensor('sensor.camera.rgb', camera_transform, {
-                    'image_size_x': '400',
-                    'image_size_y': '300',
-                    'fov': '90',
-                    'exposure_mode': 'manual',
-                    'exposure_compensation': '2.0',     # Brightness control (-5 to 5)
-                    'iso': '200',                       # ISO sensitivity (default is 100)
-                    'shutter_speed': '100'             # In microseconds; try 100–200
-                })
-                """
+
             # if fails return zero observations
             except Exception as e:
                 print(f"[ERROR] Camera spawn failed: {e} \n_safe_zero_obs returned")
                 obs = self._safe_zero_obs()
                 info = {"failed_reason": str(e)}
                 return obs, info
-
-
-            # IMU - not used in trainig
-            # imu_transform = carla.Transform(carla.Location(z=2.0))
-            # try:
-            #     self.imu = self.attach_sensor('sensor.other.imu', imu_transform)
-            # except Exception as e:
-            #     print(f"[WARN] IMU spawn failed: {e}")
-            #     self.imu = None
 
             # use collision sensor
             col_transform = carla.Transform(carla.Location(z=2.0))
@@ -400,8 +365,6 @@ class TrainingEnvironment(gym.Env):
             # register listeners: callbacks
             # The camera callback will convert and store a *numpy* copy of image bytes.
             self.camera.listen(self.camera_callback)
-            if self.imu:
-                self.imu.listen(self.imu_callback)
             if self.col:
                 self.col.listen(self.collision_handler)
             if self.lane:
@@ -421,7 +384,6 @@ class TrainingEnvironment(gym.Env):
             #print(f'Obs: {obs}')
 
             # include route info
-            # info = {f"Route has {len(self.route)} waypoints from start to goal"}  
             info = {"route_info": f"Route has {len(self.route)} waypoints from start to goal"}
 
             # return obs and info from reset function, expected so...
@@ -455,7 +417,6 @@ class TrainingEnvironment(gym.Env):
             brake    = float(np.clip(brake, 0.0, 1.0))
             # store action for comparison in reward mechanism
             self.last_action = (throttle, brake)
-            # self.current_throttle = throttle *****
 
             # check vehicle again, if no vehicle terminate and return zeros
             if self.vehicle is None or not self.vehicle.is_alive:
@@ -482,11 +443,6 @@ class TrainingEnvironment(gym.Env):
             self.step_moved += 1
             # increment total steps in whole training
             self.total_steps += 1
-
-            # # [Debug] how step, throttle, brake and speed is going along with training ####################### [Debug]
-            # if self.step_moved % 10 == 0:
-            #     print(f"[DEBUG] step {self.step_moved}: steer={self.current_steer} throttle={throttle:.2f}, brake={brake:.2f}, speed={self.speed:.2f}")
-            # ####################### [Debug]
 
             # simulation tick according to sync or async
             if self.world.get_settings().synchronous_mode:
@@ -531,8 +487,6 @@ class TrainingEnvironment(gym.Env):
 
         finally:
             pass
-            # ensure cleanup when leaving step - cleanup done by gymnasium
-            #self.clean_env()
     
     # CLEAN environment once episode ends - managed by gymnasium -
     def clean_env(self):
@@ -667,7 +621,6 @@ class TrainingEnvironment(gym.Env):
 
         # sanity check for remainig actors after cleaning
         self.debug_list_actors('after')
-        # print(f'[Remaining after clean-up]: {remaining}')
 
     # getting ERROR: failed to destroy actor 280 : std::exception from server, to make sure - sanity check 
     def debug_list_actors(self, text):
@@ -830,7 +783,7 @@ class TrainingEnvironment(gym.Env):
         """
         # to compare the sensor data in observations
         #self.image_frame = image.frame
-
+        
         try:
             # If sensor is semantic, convert to cityscapes color to have a visual RGB mapping:
             try:
@@ -852,7 +805,6 @@ class TrainingEnvironment(gym.Env):
             with self.image_lock:
                 # store a copy so CARLA can free its internal buffer safely
                 self.latest_image = arr.copy()
-                #self.latest_image = image *****
 
         except Exception as e:
             print(f"[WARN] camera_callback error: {e}")
@@ -889,15 +841,6 @@ class TrainingEnvironment(gym.Env):
         
         # flip display -- update
         pygame.display.flip()
-
-    # handle IMU sensor data - not used in training
-    # def imu_callback(self, data):
-    #     try:
-    #         self.latest_imu_data = (
-    #             f'IMU:\nAccel: ({data.accelerometer.x:.2f}, {data.accelerometer.y:.2f}, {data.accelerometer.z:.2f})'
-    #         )
-    #     except Exception:
-    #         self.latest_imu_data = ""
 
     # handle collision sensor data
     def collision_handler(self, event):
@@ -982,14 +925,14 @@ class TrainingEnvironment(gym.Env):
             f"v_rel_n={v_rel_along_normal:.2f} impact={n_norm:.2f} caused_by_us={self.accident_caused_by_us}")
 
         # useful debug info
-        # self.collision_info = {
-        #     "other_id": event.other_actor.id,
-        #     "other_type": event.other_actor.type_id,
-        #     "impact_impulse_norm": float(n_norm),
-        #     "v_ego_norm": float(np.linalg.norm(v_ego)),
-        #     "v_other_norm": float(np.linalg.norm(v_other)),
-        #     "v_rel_along_normal": v_rel_along_normal
-        # }
+        self.collision_info = {
+            "other_id": event.other_actor.id,
+            "other_type": event.other_actor.type_id,
+            "impact_impulse_norm": float(n_norm),
+            "v_ego_norm": float(np.linalg.norm(v_ego)),
+            "v_other_norm": float(np.linalg.norm(v_other)),
+            "v_rel_along_normal": v_rel_along_normal
+        }
 
     # handle lane invasion detector -- solid line
     def lane_handler(self, data):
@@ -998,7 +941,6 @@ class TrainingEnvironment(gym.Env):
             #self.lane_frame = data.frame
             # store lane invasion detection
             self.latest_lane_data = data
-            # self.lane_invasion_timer = time.time() *****
         except Exception:
             pass
 
@@ -1012,7 +954,6 @@ class TrainingEnvironment(gym.Env):
             # store detection
             else:                
                 self.detected_actor = data
-                # self.detection_timer = time.time() *****
         except Exception:
             self.detected_actor = None
 
@@ -1046,91 +987,7 @@ class TrainingEnvironment(gym.Env):
             self.last_traffic_light = None
             self.last_traffic_light_state = "None"
             self.tl_distance = None
-
-  
-    # # vector helper
-    # def normalize_vector(self, vector):
-    #     mag = (vector.x**2 + vector.y**2 + vector.z**2)**0.5
-    #     if mag == 0:
-    #         return None
-    #     return carla.Vector3D(vector.x / mag, vector.y / mag, vector.z / mag)
-
-    # def is_same_direction(self, actor_velocity, actor_transform, ego_forward):
-    #     actor_unit = self.normalize_vector(actor_velocity)
-    #     if actor_unit is None:
-    #         actor_unit = self.normalize_vector(actor_transform.get_forward_vector())
-    #     if actor_unit is None or ego_forward is None:
-    #         return "unknown"
-    #     dot = ego_forward.x * actor_unit.x + ego_forward.y * actor_unit.y + ego_forward.z * actor_unit.z
-    #     if dot > 0.5:
-    #         return "same"
-    #     elif dot < -0.5:
-    #         return "opposite"
-    #     else:
-    #         return "perpendicular or unclear"
-
-    # def get_nearby_actors_by_direction(self, radius=50.0):
-    #     try:
-    #         # get our location and forward vector (direction)
-    #         ego_location = self.vehicle.get_location()
-    #         ego_forward = self.vehicle.get_transform().get_forward_vector()
-    #         # get all actors
-    #         all_actors = self.vehicle.get_world().get_actors()
-    #         # empty lists to store vaious direction actors
-    #         front_actors, rear_actors, opposite_direction_actors = [], [], []
-
-    #         for actor in all_actors:
-    #             # skip our vehicle
-    #             if actor.id == self.vehicle.id:
-    #                 continue
-
-    #             if actor.type_id.startswith('vehicle.') or actor.type_id.startswith('walker.pedestrian.'):
-    #                 actor_location = actor.get_location()
-    #                 distance = actor_location.distance(ego_location)
-
-    #                 # get actors in given radius 50m
-    #                 if distance <= radius:
-                        
-    #                     # set actors physics to true closer to our vehicle -- did not work as expected
-    #                     #actor.set_simulate_physics(True)
-
-    #                     # if the distance less than 30m calculate direction
-    #                     if distance <= 30:
-
-    #                         direction_vector = actor_location - ego_location
-    #                         try:
-    #                             direction_vector = direction_vector.make_unit_vector()
-    #                         except Exception:
-    #                             pass
-                            
-    #                         # calculate direction
-    #                         dot = ego_forward.x * direction_vector.x + ego_forward.y * direction_vector.y + ego_forward.z * direction_vector.z
-    #                         actor_velocity = actor.get_velocity()
-    #                         actor_transform = actor.get_transform()
-    #                         direction = self.is_same_direction(actor_velocity, actor_transform, ego_forward)
-
-    #                         # store both front and rear actors if in the same direction
-    #                         if dot > 0.3 and direction == 'same':
-    #                             front_actors.append((actor, distance))
-    #                         elif dot < -0.3 and direction == 'same':
-    #                             rear_actors.append((actor, distance))
-    #                         elif direction == 'opposite':
-    #                             opposite_direction_actors.append((actor, distance))
-                        
-    #                 # set actors physics to false far to our vehicle
-    #                 # else:
-    #                 #     actor.set_simulate_physics(False)
-    #         # sort actors based on distances
-    #         front_actors.sort(key=lambda x: x[1])
-    #         rear_actors.sort(key=lambda x: x[1])
-    #         opposite_direction_actors.sort(key=lambda x: x[1])
-
-    #         # return listed actors
-    #         return front_actors, rear_actors, opposite_direction_actors
-        
-    #     except Exception:
-    #         return [], [], []
-        
+      
     # to track the progress in reward calculation and update the observation
     def calculate_remaining_route_distance(self):
         try:
@@ -1320,7 +1177,7 @@ class TrainingEnvironment(gym.Env):
                     # reduce detection for static objects, by the side of the road
                     if self.detected_actor.other_actor.type_id.startswith("static"):
                         # calculate danger; relative to distance to object, less danger due to static object -- normalized
-                        danger = ((safe_dist - self.front_distance) / safe_dist) / 2  # 0 -> 1                    
+                        danger = ((safe_dist - self.front_distance) / safe_dist) / 2                  
 
                 # objects detected on the road
                 else:
