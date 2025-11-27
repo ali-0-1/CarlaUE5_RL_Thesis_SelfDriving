@@ -17,17 +17,16 @@ import math
 # FOR LINUX
 # this was necessary once we worked other than PythonAPI/examples folder, PythonAPI/carla/agents/navigation folder needed
 # Add PythonAPI path so we can import navigation modules (adjust if your path differs)
-# sys.path.append(os.path.join(os.path.dirname(__file__), "..", "PythonAPI"))
-# from agents.navigation.global_route_planner import GlobalRoutePlanner
-# from agents.navigation.local_planner import LocalPlanner
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "PythonAPI"))
 
-# FOR WINDOWS - modify part of ".." according to PythonAPI path, in our case it is 3 folders back
-carla_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..","..", "PythonAPI", "carla"))
-print("CARLA path added to sys.path:", carla_path)
 
-# Add it to sys.path if not already present
-if carla_path not in sys.path:
-    sys.path.append(carla_path)
+# # FOR WINDOWS - modify part of ".." according to PythonAPI path, in our case it is 3 folders back
+# carla_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..","..", "PythonAPI", "carla"))
+# print("CARLA path added to sys.path:", carla_path)
+
+# # Add it to sys.path if not already present
+# if carla_path not in sys.path:
+#     sys.path.append(carla_path)
 
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.local_planner import LocalPlanner
